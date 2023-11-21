@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "outDir": "../static"
+  },
+  "extends": "../tsconfig.json"
+}

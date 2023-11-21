@@ -1,0 +1,20 @@
+
+<%- include('head', { title: 'Log in' }) -%>
+
+<h1>Log in</h1>
+<p>Don't have an account? <a href="/register">Register!</a></p>
+<form method="post" action="/login">
+  <p>
+    <label for="username">Username:</label>
+    <input type="text" name="username" id="username">
+  </p>
+  <p>
+    <label for="password">Password:</label>
+    <input type="text" name="password" id="password">
+  </p>
+  <p>
+    <input type="submit" value="Login">
+  </p>
+</form>
+
+<%- include('foot') -%>
