@@ -1,0 +1,2 @@
+# Comparison of PAKE protocols for web authentication
+This project aims to compare the performance of two Password Authenticated Key Exchange (PAKE) protocols for web authentication. The first is OPAQUE which is provided by the [`@cloudflare/opaque-ts`](https://www.npmjs.com/package/@cloudflare/opaque-ts) TypeScript library. The second is Owl, a new PAKE protocol which this project aims to implement in TypeScript. An express.js app will be used to demonstrate the protocols.
