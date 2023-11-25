@@ -4,19 +4,20 @@ import {
     RegistrationRecord,
     CredentialFile,
     RegistrationRequest,
-    OpaqueServer
+    OpaqueServer,
+    KE1,
+    KE3,
+    ExpectedAuthResult
 } from "@cloudflare/opaque-ts"
 import { Request, Response } from "express";
 import { validate } from "jsonschema";
-import { User } from "./database.js";
+import { Expected, User } from "./database.js";
 
 const cfg = getOpaqueConfig(OpaqueID.OPAQUE_P256);
 
 function fromHex(x: string): number[] {
     return Array.from(Buffer.from(x, 'hex'))
 }
-
-const env = process.env;
 
 function getEnv(v: string): any{
     if(!process.env[v]){
@@ -51,7 +52,7 @@ export async function register_init(req: Request, res: Response) {
     const credential_identifier = req.body.username.trim();
     // check if username is available
     const existing = await User
-        .findOne({where: {username: credential_identifier}})
+        .findByPk(credential_identifier)
         .then(result => result !== null);
     if(existing){
         return res.status(400).send("Username taken");
@@ -97,5 +98,96 @@ export async function register_finish(req: Request, res: Response) {
     return res.json({
         username: credential_identifier,
         message: "'" + credential_identifier + "' registered"
+    });
+}
+
+const auth_init_schema = {
+    "type": "object",
+    "properties": {
+        "ke1": {
+            "type": "array",
+            "items": {"type": "integer"}
+        },
+        "username": {"type": "string"}
+    }
+};
+
+export async function auth_init(req: Request, res: Response){
+    if(!validate(req.body, auth_init_schema)){
+        return res.status(400).send("Incorrect JSON format");
+    }
+    const ke1Serialised = req.body.ke1;
+    const credential_identifier = req.body.username.trim();
+    // look for user record
+    const user = await User.findByPk(credential_identifier);
+    if(!user){
+        return res.status(404).send("User not found in database");
+    }
+    const credential_file = CredentialFile.deserialize(cfg, user.credentials);
+    if(credential_file.credential_identifier != credential_identifier){
+        return res.status(400).send("Credential identified does not match stored record");
+    }
+    const authServer = new OpaqueServer(cfg, oprf_seed, server_ake_keypair, server_identity);
+    const ke1 = KE1.deserialize(cfg, ke1Serialised);
+    const initiated = await authServer.authInit(
+        ke1,
+        credential_file.record,
+        credential_file.credential_identifier,
+        credential_file.credential_identifier 
+    );
+    if(initiated instanceof Error){
+        return res.status(400).send(initiated.message);
+    }
+    const {ke2, expected} = initiated;
+    // todo: check if record already exists
+    await Expected.create({
+        username: credential_identifier,
+        expected: expected.serialize()
+    });
+    return res.json({
+        message: "intermediate authentication key enclosed",
+        ke2: ke2.serialize()
+    });
+}
+
+const auth_finish_schema = {
+    "type": "object",
+    "properties": {
+        "ke3": {
+            "type": "array",
+            "items": {"type": "integer"}
+        },
+        "username": {"type": "string"},
+        "session_key": {
+            "type": "array",
+            "items": {"type": "integer"}
+        }
+    }
+};
+
+export async function auth_finish(req: Request, res: Response){
+    if(!validate(req.body, auth_finish_schema)){
+        return res.status(400).send("Incorrect JSON format");
+    }
+    const ke3Serialised = req.body.ke3;
+    const credential_identifier = req.body.username;
+    const client_session_key = req.body.session_key;
+    const authServer = new OpaqueServer(cfg, oprf_seed, server_ake_keypair, server_identity);
+    const ke3 = KE3.deserialize(cfg, ke3Serialised);
+    const expected = await Expected.findByPk(credential_identifier);
+    if(!expected){
+        return res.status(404).send("Could not find expected auth result");
+    }
+    const expected_auth = ExpectedAuthResult.deserialize(cfg, expected.expected);
+    const authFinish = authServer.authFinish(ke3, expected_auth);
+    if(authFinish instanceof Error){
+        return res.status(400).send(authFinish.message);
+    }
+    await expected.destroy();
+    const {session_key: server_session_key} = authFinish;
+    return res.json({
+        message: "login success",
+        client_session_key: client_session_key,
+        server_session_key: server_session_key
     });
 }

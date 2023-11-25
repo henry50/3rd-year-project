@@ -3,7 +3,7 @@ import {
     getOpaqueConfig,
     OpaqueID,
     OpaqueClient,
-    RegistrationResponse
+    KE2
 // @ts-ignore
 } from "./opaque_full.js" 
 
@@ -17,49 +17,46 @@ document.querySelector("form")!.addEventListener("submit", async function(event:
     const form = new FormData(event.target as HTMLFormElement);
     const client_identity = form.get("username")!.toString().trim();
     const password = form.get("password")!.toString().trim();
-    const confirm = form.get("confirm-password")!.toString().trim();
-    if(password != confirm){
-        throw new Error("Passwords must match");
-    }
-    // create client and attempt registration
-    const client = new OpaqueClient(cfg);
-    const init = await client.registerInit(password);
-    if(init instanceof Error){
-        throw new Error("Registration initiation failed");
-    }
-    var response = await fetch("/register/register-init", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            username: client_identity,
-            init: init.serialize()
-        })
-    });
-    if(response.status != 200){
-        throw new Error(await response.text());
-    }
-    var result = await response.json();
-    const envelope = await RegistrationResponse.deserialize(cfg, result.envelope);
-    const registration = await client.registerFinish(envelope, server_identity, client_identity);
-    if(registration instanceof Error){
-        throw new Error("Sealing of registration envelope failed");
-    }
-    const record = registration.record;
     
-    response = await fetch("/register/register-finish", {
+    const client = new OpaqueClient(cfg);
+    const ke1 = await client.authInit(password);
+    if(ke1 instanceof Error){
+        throw new Error("Failed to initialise login");
+    }
+    let response = await fetch("/login/login-init", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             username: client_identity,
-            record: record.serialize()
+            ke1: ke1.serialize()
         })
     });
     if(response.status != 200){
         throw new Error(await response.text());
     }
-    result = response.json();
-    console.log(`Success! ${result.message}`);
-    window.location.replace("/login");
+    let result = await response.json();
+
+    const ke2 = KE2.deserialize(cfg, result.ke2);
+    const authFinish = await client.authFinish(ke2, server_identity, client_identity);
+    if(authFinish instanceof Error){
+        throw authFinish;
+    }
+    const {ke3, session_key} = authFinish;
+    response = await fetch("/login/login-finish", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            username: client_identity,
+            ke3: ke3.serialize(),
+            session_key: session_key
+        })
+    });
+    if(response.status != 200){
+        throw new Error(await response.text());
+    }
+    result = await response.json();
+
+    window.location.replace("/restricted");
     } catch(error: any){
         console.error(error.message);
     }

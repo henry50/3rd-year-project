@@ -1,4 +1,7 @@
 import { Sequelize, Model, DataTypes } from "sequelize";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const database_uri = process.env.DATABASE_URI;
 if(!database_uri){
@@ -20,9 +23,25 @@ export class User extends Model {
 User.init({
     username: {
         type: DataTypes.STRING,
-        allowNull: false
+        primaryKey: true
     },
     credentials: {
+        type: DataTypes.JSON,
+        allowNull: false
+    }
+}, { sequelize });
+
+export class Expected extends Model {
+    declare username: string;
+    declare expected: number[];
+}
+
+Expected.init({
+    username: {
+        type: DataTypes.STRING,
+        primaryKey: true
+    },
+    expected: {
         type: DataTypes.JSON,
         allowNull: false
     }

@@ -3,13 +3,15 @@ import path from "path";
 import { fileURLToPath } from "url";
 import session from "express-session";
 import dotenv from "dotenv";
+dotenv.config();
 // make this swappable with ./owl_server.ts??
 import {
     register_init,
     register_finish,
+    auth_init,
+    auth_finish
 } from "./opaque_server.js";
 
-dotenv.config();
 
 // __dirname workaround for esm
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -50,18 +52,6 @@ app.get("/", function(req, res){
     res.redirect("/login");
 });
 
-app.get("/restricted", function(req, res){
-    res.send("Wahoo! restricted area, click to <a href=\"/logout\">logout</a>");
-});
-
-app.get("/logout", function(req, res){
-    // destroy the user"s session to log them out
-    // will be re-created next request
-    req.session.destroy(function(){
-        res.redirect("/");
-    });
-});
-
 app.post("/register/register-init", register_init);
 
 app.post("/register/register-finish", register_finish);
@@ -74,8 +64,20 @@ app.get("/login", function(req, res){
     res.render("login");
 });
 
-app.post("/login", function (req, res, next) {
-    res.send("not implemented :(");
+app.post("/login/login-init", auth_init);
+
+app.post("/login/login-finish", auth_finish);
+
+app.get("/restricted", function(req, res){
+    res.send(`You are logged in as ${req.session.user}.  <a href="/logout">Log out</a>`);
+});
+
+app.get("/logout", function(req, res){
+    // destroy the user"s session to log them out
+    // will be re-created next request
+    req.session.destroy(function(){
+        res.redirect("/");
+    });
 });
 
 const port = process.env.PORT;
