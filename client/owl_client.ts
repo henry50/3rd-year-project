@@ -1,10 +1,6 @@
 import BigNumber from "bignumber.js";
 import { OwlCommon, ZKP, ZKPVerificationFailure } from "../common/owl_common"
 
-BigNumber.config({
-    CRYPTO: true // use cryptographically secure PRNG
-});
-
 interface ClientInitVals{
     username: string;
     t: BigNumber;

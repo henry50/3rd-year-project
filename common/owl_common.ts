@@ -44,6 +44,8 @@ export class OwlCommon {
      * @returns Random number
      */
     rand(from: BigNumber, to: BigNumber): BigNumber {
+        // use cryptographically secure PRNG
+        BigNumber.config({CRYPTO: true});
         // rand = floor(random() * (max - min + 1) + min)
         // to.precision(true) gets the log_10 of to which is then used
         // to determine the number of decimal places to randomly generate
