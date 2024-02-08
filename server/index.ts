@@ -10,7 +10,7 @@ import {
     register_finish,
     auth_init,
     auth_finish
-} from "./opaque_server.js";
+} from "./owl_routes.js";
 
 
 // __dirname workaround for esm

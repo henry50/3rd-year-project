@@ -1,7 +1,7 @@
 node_modules/
 db/
 build/
-static/opaque_register.js
-static/opaque_login.js
+dist/
+testing/
 .env
 *.db

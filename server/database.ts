@@ -17,7 +17,7 @@ try{
 
 export class User extends Model {
     declare username: string;
-    declare credentials: number[];
+    declare credentials: any;
 }
 
 User.init({

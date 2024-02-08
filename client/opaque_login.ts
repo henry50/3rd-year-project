@@ -1,11 +1,9 @@
-
 import {
     getOpaqueConfig,
     OpaqueID,
     OpaqueClient,
     KE2
-// @ts-ignore
-} from "./opaque_full.js" 
+} from "@cloudflare/opaque-ts"
 
 
 const cfg = getOpaqueConfig(OpaqueID.OPAQUE_P256)

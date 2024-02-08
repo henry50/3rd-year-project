@@ -5,17 +5,19 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "npm run build:client && npm run build:server",
-    "build:client": "cd client && tsc",
-    "build:server": "cd server && tsc",
+    "build": "npm run build:server && npm run build:client",
+    "build:common": "cd common && tsc",
+    "build:client": "npx webpack",
+    "build:server": "npm run build:common && cd server && tsc",
     "start": "node build/index.js",
-    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q build/index.js\"",
+    "dev": "concurrently \"tsc --watch\" \"nodemon -q build/index.js\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Henry Lunn",
   "license": "UNLICENSED",
   "dependencies": {
     "@cloudflare/opaque-ts": "^0.7.5",
+    "bignumber.js": "^9.1.2",
     "dotenv": "^16.3.1",
     "ejs": "^3.1.9",
     "express": "^4.18.2",
@@ -35,6 +37,10 @@
     "@types/node": "^20.9.3",
     "concurrently": "^8.2.2",
     "nodemon": "^3.0.1",
-    "typescript": "^5.3.2"
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.2",
+    "webpack": "^5.90.1",
+    "webpack-cli": "^5.1.4"
   }
 }
