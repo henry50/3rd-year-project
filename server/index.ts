@@ -31,7 +31,7 @@ app.set("views", path.join(__dirname, "..", "views"));
 
 // middleware
 app.use(express.json());
-app.use("/static", express.static(path.join(__dirname, "..", "static")));
+app.use("/dist", express.static(path.join(__dirname, "..", "dist")));
 app.use(express.urlencoded({ extended: false }));
 app.use(session({
     resave: false, // don't save session if unmodified

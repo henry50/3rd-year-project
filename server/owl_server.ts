@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import { OwlCommon, ZKP, ZKPVerificationFailure } from "../build/owl_common"
+import { OwlCommon, ZKP, ZKPVerificationFailure } from "../build/owl_common.js"
 
 interface ServerInitVals{
     username: string;
