@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import { OwlCommon, ZKP, ZKPVerificationFailure } from "../common/owl_common"
+import { OwlCommon, ZKP, ZKPVerificationFailure } from "./owl_common.js"
 
 interface ClientInitVals{
     username: string;
@@ -13,16 +13,44 @@ interface ClientInitVals{
     PI2: ZKP;
 }
 
-export default class OwlClient extends OwlCommon {
+export class RegistrationRequest {
+    username: string;
+    t: BigNumber;
+    pi: BigNumber;
+    T: BigNumber
+    constructor(username: string, t: BigNumber, pi: BigNumber, T: BigNumber){
+        [this.username, this.t, this.pi, this.T] = [username, t, pi, T];
+    }
+    static deserialize(x: string): RegistrationRequest{
+        const parsed = JSON.parse(x);
+        try{
+            const [username, t, pi, T] = [parsed.username, BigNumber(parsed.t), BigNumber(parsed.pi), BigNumber(parsed.T)];
+            if(!t.isNaN() && !pi.isNaN() && !T.isNaN()){
+                return new this(username, t, pi, T);
+            }
+        } catch{}
+        throw new Error("Could not deserialize registration request - invalid format")
+    }
+    serialize(){
+        return JSON.stringify({
+            t: this.t.toString(16),
+            pi: this.pi.toString(16),
+            T: this.T.toString(16)
+        });
+    }
+}
+
+
+export class OwlClient extends OwlCommon {
     initValues!: ClientInitVals;
-    async register(username: string, password: string): Promise<string> {
+    async register(username: string, password: string): Promise<RegistrationRequest> {
         // t = H(U||w) % q
         const t = (await this.H(username + password)).mod(this.config.q);
         // pi = H(t) % q
         const pi = (await this.H(t.toString(10))).mod(this.config.q);
         // T = g^t % p
         const T = this.config.g.pow(t, this.config.p);
-        return JSON.stringify({"username": username, "pi": pi.toString(16), "T": T.toString(16)});
+        return new RegistrationRequest(username, t, pi, T);
     }
     async authInit(username: string, password: string) {
         // t = H(U||w) % q

@@ -11,6 +11,16 @@ const entryPoints = [
     "owl_register"
 ];
 
+// from https://github.com/webpack/webpack/issues/11467#issuecomment-808618999
+// fixes "The request ... failed to resolve only because it was resolved as fully specified" error
+const webpack5esmInteropRule = {
+    test: /\.m?js/,
+    resolve: {
+      fullySpecified: false
+    }
+};
+  
+
 const configs = entryPoints.map((entryPoint) => (
     {
         entry: resolve(__dirname, "client", `${entryPoint}.ts`),
@@ -20,7 +30,8 @@ const configs = entryPoints.map((entryPoint) => (
                     test: /\.tsx?$/,
                     use: 'ts-loader',
                     exclude: /node_modules/
-                }
+                },
+                webpack5esmInteropRule
             ]
         },
         resolve: {
@@ -33,5 +44,6 @@ const configs = entryPoints.map((entryPoint) => (
         mode: "production"
     }
 ));
+
 
 export default configs;

@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import { OwlCommon, ZKP, ZKPVerificationFailure } from "../build/owl_common.js"
+import { OwlCommon, ZKP, ZKPVerificationFailure } from "./owl_common.js"
 
 interface ServerInitVals{
     username: string;
@@ -18,7 +18,7 @@ interface ServerInitVals{
     
 }
 
-export default class OwlServer extends OwlCommon {
+export class OwlServer extends OwlCommon {
     initValues!: ServerInitVals;
     async register(){
         const x3 = this.rand(BigNumber(1), this.config.q.minus(1));
