@@ -2,5 +2,6 @@ node_modules/
 demo/build/
 demo/dist/
 demo/testing/
+owl-ts/lib
 .env
 *.db
