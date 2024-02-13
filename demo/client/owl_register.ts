@@ -23,13 +23,16 @@ document.querySelector("form")!.addEventListener("submit", async function(event:
     let response = await fetch("/register/register-init", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: regRequest.serialize()
+        body: JSON.stringify({
+            username: username,
+            data: regRequest.serialize()
+        })
     });
     if(response.status != 200){
         throw new Error(await response.text());
     }
     let result = await response.json();
-    window.location.replace("/login");
+    // window.location.replace("/login");
     } catch(error: any){
         console.error(error.message);
     }

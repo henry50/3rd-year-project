@@ -1,4 +1,5 @@
 import { OwlClient } from "owl-ts";
+import { AuthInitResponse } from "owl-ts/lib/messages";
 
 const cfg = {
     p: "0xfd7f53811d75122952df4a9c2eece4e7f611b7523cef4400c31e3f80b6512669455d402251fb593d8d58fabfc5f5ba30f6cb9b556cd7813b801d346ff26660b76b9950a5a49f9fe8047b1022c24fbba9d7feb7c61bf83b57e7c6a8a6150f04fb83f6d3c51ec3023554135a169132f675f3ae2b61d72aeff22203199dd14801c7",
@@ -15,22 +16,13 @@ document.querySelector("form")!.addEventListener("submit", async function(event:
     const password = form.get("password")!.toString().trim();
     
     const client = new OwlClient(cfg);
-    const {X1, X2, PI1, PI2} = await client.authInit(username, password);
+    const init = await client.authInit(username, password);
     let response = await fetch("/login/login-init", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             username: username,
-            X1: X1.toString(16),
-            X2: X2.toString(16),
-            PI1: {
-                h: PI1.h.toString(16),
-                r: PI1.r.toString(16)
-            },
-            PI2: {
-                h: PI2.h.toString(16),
-                r: PI2.r.toString(16)
-            }
+            init: init.serialize()
         })
     });
     if(response.status != 200){
@@ -39,25 +31,20 @@ document.querySelector("form")!.addEventListener("submit", async function(event:
     let result = await response.json();
     console.log(result);
 
-    // const ke2 = KE2.deserialize(cfg, result.ke2);
-    // const authFinish = await client.authFinish(ke2, server_identity, client_identity);
-    // if(authFinish instanceof Error){
-    //     throw authFinish;
-    // }
-    // const {ke3, session_key} = authFinish;
-    // response = await fetch("/login/login-finish", {
-    //     method: "POST",
-    //     headers: {"Content-Type": "application/json"},
-    //     body: JSON.stringify({
-    //         username: client_identity,
-    //         ke3: ke3.serialize(),
-    //         session_key: session_key
-    //     })
-    // });
-    // if(response.status != 200){
-    //     throw new Error(await response.text());
-    // }
-    // result = await response.json();
+    const finishedSerialised = AuthInitResponse.deserialize(result);
+    const [k, finish] = await client.authFinish(finishedSerialised);
+
+    response = await fetch("/login/login-finish", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            username: username,
+            finish: finish.serialize()
+        })
+    })
+
+    result = await response.text();
+    console.log(result);
 
     // window.location.replace("/restricted");
     } catch(error: any){

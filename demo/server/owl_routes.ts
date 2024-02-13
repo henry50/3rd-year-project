@@ -3,6 +3,7 @@ import { validate } from "jsonschema";
 import { Expected, User } from "./database.js";
 import { OwlServer } from "owl-ts";
 import BigNumber from "bignumber.js"; // remove this
+import { AuthFinishRequest, AuthInitRequest, RegistrationRequest, UserCredentials } from "owl-ts/lib/messages.js";
 
 const cfg = {
     p: "0xfd7f53811d75122952df4a9c2eece4e7f611b7523cef4400c31e3f80b6512669455d402251fb593d8d58fabfc5f5ba30f6cb9b556cd7813b801d346ff26660b76b9950a5a49f9fe8047b1022c24fbba9d7feb7c61bf83b57e7c6a8a6150f04fb83f6d3c51ec3023554135a169132f675f3ae2b61d72aeff22203199dd14801c7",
@@ -17,8 +18,13 @@ const register_init_schema = {
     "type": "object",
     "properties": {
         "username": {"type": "string"},
-        "T": {"type": "string"},
-        "pi": {"type": "string"}
+        "data": {
+            "type": "object",
+            "properties": {
+                "T": {"type": "string"},
+                "pi": {"type": "string"}
+            }
+        }
     }
 };
 
@@ -26,7 +32,7 @@ export async function register_init(req: Request, res: Response){
     if(!validate(req.body, register_init_schema)){
         return res.status(400).send("Incorrect JSON format");
     }
-    const {username, T, pi} = req.body;
+    const {username, data} = req.body;
     // check if user already exists
     const existing = await User
         .findByPk(username)
@@ -35,20 +41,12 @@ export async function register_init(req: Request, res: Response){
         return res.status(400).send("Username taken");
     }
     // create user record
-    const {X3, PI3} = await server.register();
-    const user_serialised = {
-        X3: X3.toString(16),
-        PI3: {
-            h: PI3.h.toString(16),
-            r: PI3.r.toString(16)
-        },
-        pi: pi,
-        T: T
-    }
+    const regRequest = RegistrationRequest.deserialize(data);
+    const credentials = await server.register(regRequest);
     // save user record to database
     await User.create({
         username: username,
-        credentials: user_serialised
+        credentials: credentials.serialize()
     });
     return res.json({
         username: username,
@@ -66,20 +64,25 @@ const auth_init_schema = {
     "type": "object",
     "properties": {
         "username": {"type": "string"},
-        "X1": {"type": "string"},
-        "X2": {"type": "string"},
-        "PI1": {
+        "init": {
             "type": "object",
             "properties": {
-                "h": {"type": "string"},
-                "r": {"type": "string"}
-            }
-        },
-        "PI2": {
-            "type": "object",
-            "properties": {
-                "h": {"type": "string"},
-                "r": {"type": "string"}
+                "X1": {"type": "string"},
+                "X2": {"type": "string"},
+                "PI1": {
+                    "type": "object",
+                    "properties": {
+                        "h": {"type": "string"},
+                        "r": {"type": "string"}
+                    }
+                },
+                "PI2": {
+                    "type": "object",
+                    "properties": {
+                        "h": {"type": "string"},
+                        "r": {"type": "string"}
+                    }
+                }
             }
         }
     }
@@ -89,44 +92,37 @@ export async function auth_init(req: Request, res: Response){
     if(!validate(req.body, auth_init_schema)){
         return res.status(400).send("Incorrect JSON format");
     }
-    const {username, X1, X2, PI1, PI2} = req.body;
+    const {username, init} = req.body;
     // check if user exists
     const user = await User.findByPk(username);
     if(!user){
         return res.status(404).send("User not found in database");
     }
-    const {X3, PI3, pi, T} = user.credentials;
+    const authRequest = AuthInitRequest.deserialize(init);
+    const credentials = UserCredentials.deserialize(user.credentials);
     // get initial auth values
-    const {X4, PI4, beta, PIBeta} = await server.authInit(username, BigNumber(pi), BigNumber(T), BigNumber(X1), BigNumber(X2), BigNumber(X3),
-                            {h: BigNumber(PI1.h), r: BigNumber(PI1.r)}, {h: BigNumber(PI2.h), r: BigNumber(PI2.r)},
-                                {h: BigNumber(PI3.h), r: BigNumber(PI3.r)});
-    return res.json({
-        X4: X4.toString(16),
-        PI4: {
-            h: PI4.h.toString(16),
-            r: PI4.r.toString(16)
-        },
-        beta: beta.toString(16),
-        PIBeta: {
-            h: PIBeta.h.toString(16),
-            r: PIBeta.r.toString(16)
-        }
-    });
+    const response = await server.authInit(username, authRequest, credentials);
+    return res.json(response.serialize());
 }
 
 const auth_finish_schema = {
     "type": "object",
     "properties": {
         "username": {"type": "string"},
-        "alpha": {"type": "string"},
-        "PIAlpha": {
+        "finish": {
             "type": "object",
             "properties": {
-                "h": {"type": "string"},
+                "alpha": {"type": "string"},
+                "PIAlpha": {
+                    "type": "object",
+                    "properties": {
+                        "h": {"type": "string"},
+                        "r": {"type": "string"}
+                    }
+                },
                 "r": {"type": "string"}
             }
-        },
-        "r": {"type": "string"}
+        }
     }
 }
 
@@ -134,8 +130,9 @@ export async function auth_finish(req: Request, res: Response){
     if(!validate(req.body, auth_finish_schema)){
         return res.status(400).send("Incorrect JSON format");
     }
-    const {username, alpha, PIAlpha, r} = req.body;
-    const login_success = await server.authFinish(BigNumber(alpha), {h: BigNumber(PIAlpha.h), r: BigNumber(PIAlpha.r)}, BigNumber(r));
+    const {username, finish} = req.body;
+    const finishReq = AuthFinishRequest.deserialize(finish);
+    const login_success = await server.authFinish(finishReq);
     if(login_success){
         // do actual login stuff
         return res.send("<p>Login successful</p>");
