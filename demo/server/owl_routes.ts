@@ -28,7 +28,7 @@ const register_init_schema = {
 
 export async function register_init(req: Request, res: Response){
     if(!validate(req.body, register_init_schema)){
-        return res.status(400).send("Incorrect JSON format");
+        return res.status(400).send("Incorrect request JSON format");
     }
     const {username, data} = req.body;
     // check if user already exists
@@ -36,7 +36,7 @@ export async function register_init(req: Request, res: Response){
         .findByPk(username)
         .then(result => result !== null);
     if(existing){
-        return res.status(400).send("Username taken");
+        return res.status(400).send("That username is already in use, please choose another");
     }
     // create user record
     const regRequest = RegistrationRequest.deserialize(data);
@@ -49,16 +49,13 @@ export async function register_init(req: Request, res: Response){
         username: username,
         credentials: credentials.serialize()
     });
-    return res.json({
-        username: username,
-        message: "'" + username + "' registered successfully"
-    });
+    return res.send("Registration successful!");
 }
 
 export async function register_finish(req: Request, res: Response){
     // owl does not have a second registration flow, this is included
     // for compatibility with OPAQUE
-    return res.status(404);
+    return res.sendStatus(404);
 }
 
 const auth_init_schema = {
@@ -91,20 +88,20 @@ const auth_init_schema = {
 
 export async function auth_init(req: Request, res: Response){
     if(!validate(req.body, auth_init_schema)){
-        return res.status(400).send("Incorrect JSON format");
+        return res.status(400).send("Incorrect request JSON format");
     }
     const {username, init} = req.body;
 
     // check if user exists
     const user = await User.findByPk(username);
     if(!user){
-        return res.status(404).send("User not found in database");
+        return res.status(400).send("Incorrect username or password");
     }
 
     // deserialize stored credentials
     const credentials = UserCredentials.deserialize(user.credentials);
     if(credentials instanceof DeserializationError){
-        return res.status(500).send("Could not deserialize user credentials");
+        return res.status(500).send("Internal error: Could not deserialize user credentials");
     }
 
     // deserialize request
@@ -152,20 +149,22 @@ const auth_finish_schema = {
 
 export async function auth_finish(req: Request, res: Response){
     if(!validate(req.body, auth_finish_schema)){
-        return res.status(400).send("Incorrect JSON format");
+        return res.status(400).send("Incorrect request JSON format");
     }
     const {username, finish} = req.body;
 
     // find initial values by username
     const initial = await Expected.findByPk(username);
     if(!initial){
-        return res.status(404).send("Could not find initial auth values");
+        return res.status(400).send("Initial auth values do not exist for this user");
     }
 
     // deserialize initial values
     const init = AuthInitialValues.deserialize(initial.expected);
+    // delete initial values
+    await initial.destroy();
     if(init instanceof DeserializationError){
-        return res.status(500).send("Could not deserialize initial auth values");
+        return res.status(500).send("Internal error: Could not deserialize initial auth values");
     }
 
     // deserialize request
@@ -179,7 +178,7 @@ export async function auth_finish(req: Request, res: Response){
 
     if(login_success){
         // do session stuff
-        return res.status(200).send();
+        return res.send("Login successful");
     } else{
         return res.status(400).send("Incorrect username or password");
     }

@@ -5,6 +5,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const entryPoints = [
+    "common",
     "opaque_login",
     "opaque_register",
     "owl_login",

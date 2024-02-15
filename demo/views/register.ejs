@@ -1,24 +1,28 @@
 <%- include('head', { title: 'Register' }) -%>
 
-<h1>Register</h1>
-<p>Already have an account? <a href="/login">Log in!</a></p>
+<main class="vh-100 d-flex align-items-center justify-content-center flex-column">
+  <div class="col-md-4">
+      <h1 class="text-center pb-3">Register</h1>
+      <p>Already have an account? <a href="/login">Log in!</a></p>
+      <form>
+          <div class = "mb-3">
+              <label for="username" class="form-label">Username:</label>
+              <input type="text" name="username" id="username" class="form-control" required>
+          </div>
+          <div class = "mb-3">
+              <label for="password" class="form-label">Password:</label>
+              <input type="text" name="password" id="password" class="form-control" required>
+          </div>
+          <div class = "mb-3">
+            <label for="confirm-password" class="form-label">Confirm password:</label>
+            <input type="text" name="confirm-password" id="confirm-password" class="form-control" required>
+        </div>
+          <div class = "mb-3">
+              <input type="submit" value="Register" id="submit" class="btn btn-primary w-100">
+          </div>
+      </form>
+  </div>
+</main>
 <script type="module" src="/dist/owl_register.js"></script>
-<form method="post" action="/register">
-  <p>
-    <label for="username">Username:</label>
-    <input type="text" name="username" id="username">
-  </p>
-  <p>
-    <label for="password">Password:</label>
-    <input type="text" name="password" id="password">
-  </p>
-  <p>
-    <label for="confirm-password">Confirm password:</label>
-    <input type="text" name="confirm-password" id="confirm-password">
-  </p>
-  <p>
-    <input type="submit" value="Register">
-  </p>
-</form>
 
 <%- include('foot') -%>
