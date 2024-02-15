@@ -1,4 +1,4 @@
-import { OwlClient, AuthInitResponse } from "owl-ts";
+import { OwlClient, AuthInitResponse, DeserializationError } from "owl-ts";
 
 const cfg = {
     p: "0xfd7f53811d75122952df4a9c2eece4e7f611b7523cef4400c31e3f80b6512669455d402251fb593d8d58fabfc5f5ba30f6cb9b556cd7813b801d346ff26660b76b9950a5a49f9fe8047b1022c24fbba9d7feb7c61bf83b57e7c6a8a6150f04fb83f6d3c51ec3023554135a169132f675f3ae2b61d72aeff22203199dd14801c7",
@@ -15,39 +15,49 @@ document.querySelector("form")!.addEventListener("submit", async function(event:
     const password = form.get("password")!.toString().trim();
     
     const client = new OwlClient(cfg);
-    const init = await client.authInit(username, password);
+    const initRequest = await client.authInit(username, password);
     let response = await fetch("/login/login-init", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             username: username,
-            init: init.serialize()
+            init: initRequest.serialize()
         })
     });
     if(response.status != 200){
         throw new Error(await response.text());
     }
     let result = await response.json();
-    console.log(result);
 
-    const finishedSerialised = AuthInitResponse.deserialize(result);
-    const [k, finish] = await client.authFinish(finishedSerialised);
+    const initResponse = AuthInitResponse.deserialize(result);
+    if(initResponse instanceof DeserializationError){
+        throw initResponse;
+    }
+
+    const finish = await client.authFinish(initResponse);
+    if(finish instanceof Error){
+        throw finish;
+    }
+    const {key, finishRequest} = finish;
 
     response = await fetch("/login/login-finish", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             username: username,
-            finish: finish.serialize()
+            finish: finishRequest.serialize()
         })
-    })
+    });
 
-    result = await response.text();
-    console.log(result);
+    if(response.status == 200){
+        console.log("Login success");
+    } else{
+        console.error(`Login failure: ${await response.text()}`);
+    }
 
-    // window.location.replace("/restricted");
     } catch(error: any){
         console.error(error.message);
     }
+    // prevent form submission
     return false;
 });

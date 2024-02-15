@@ -32,6 +32,7 @@ document.querySelector("form")!.addEventListener("submit", async function(event:
         throw new Error(await response.text());
     }
     let result = await response.json();
+    console.log(result);
     // window.location.replace("/login");
     } catch(error: any){
         console.error(error.message);

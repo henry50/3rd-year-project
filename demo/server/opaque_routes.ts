@@ -140,7 +140,7 @@ export async function auth_init(req: Request, res: Response){
     }
     const {ke2, expected} = initiated;
     // todo: check if record already exists
-    await Expected.create({
+    await Expected.upsert({
         username: credential_identifier,
         expected: expected.serialize()
     });

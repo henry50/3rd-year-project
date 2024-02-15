@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { validate } from "jsonschema";
 import { Expected, User } from "./database.js";
-import { OwlServer, AuthFinishRequest, AuthInitRequest, RegistrationRequest, UserCredentials } from "owl-ts";
+import { OwlServer, AuthFinishRequest, AuthInitRequest, RegistrationRequest, UserCredentials, AuthInitialValues, DeserializationError } from "owl-ts";
 
 const cfg = {
     p: "0xfd7f53811d75122952df4a9c2eece4e7f611b7523cef4400c31e3f80b6512669455d402251fb593d8d58fabfc5f5ba30f6cb9b556cd7813b801d346ff26660b76b9950a5a49f9fe8047b1022c24fbba9d7feb7c61bf83b57e7c6a8a6150f04fb83f6d3c51ec3023554135a169132f675f3ae2b61d72aeff22203199dd14801c7",
@@ -40,6 +40,9 @@ export async function register_init(req: Request, res: Response){
     }
     // create user record
     const regRequest = RegistrationRequest.deserialize(data);
+    if(regRequest instanceof DeserializationError){
+        return res.status(400).send("Invalid request data");
+    }
     const credentials = await server.register(regRequest);
     // save user record to database
     await User.create({
@@ -91,15 +94,38 @@ export async function auth_init(req: Request, res: Response){
         return res.status(400).send("Incorrect JSON format");
     }
     const {username, init} = req.body;
+
     // check if user exists
     const user = await User.findByPk(username);
     if(!user){
         return res.status(404).send("User not found in database");
     }
-    const authRequest = AuthInitRequest.deserialize(init);
+
+    // deserialize stored credentials
     const credentials = UserCredentials.deserialize(user.credentials);
+    if(credentials instanceof DeserializationError){
+        return res.status(500).send("Could not deserialize user credentials");
+    }
+
+    // deserialize request
+    const authRequest = AuthInitRequest.deserialize(init);
+    if(authRequest instanceof DeserializationError){
+        return res.status(400).send("Invalid request data");
+    }
+    
     // get initial auth values
-    const response = await server.authInit(username, authRequest, credentials);
+    const authInit = await server.authInit(username, authRequest, credentials);
+    if(authInit instanceof Error){
+        return res.status(400).send(authInit.message);
+    }
+    const {initial, response} = authInit;
+
+    // store initial values for authFinish
+    await Expected.upsert({
+        username: username,
+        expected: initial.serialize()
+    });
+
     return res.json(response.serialize());
 }
 
@@ -129,13 +155,33 @@ export async function auth_finish(req: Request, res: Response){
         return res.status(400).send("Incorrect JSON format");
     }
     const {username, finish} = req.body;
+
+    // find initial values by username
+    const initial = await Expected.findByPk(username);
+    if(!initial){
+        return res.status(404).send("Could not find initial auth values");
+    }
+
+    // deserialize initial values
+    const init = AuthInitialValues.deserialize(initial.expected);
+    if(init instanceof DeserializationError){
+        return res.status(500).send("Could not deserialize initial auth values");
+    }
+
+    // deserialize request
     const finishReq = AuthFinishRequest.deserialize(finish);
-    const login_success = await server.authFinish(finishReq);
+    if(finishReq instanceof DeserializationError){
+        return res.status(400).send("Invalid request data");
+    }
+
+    // finish auth, determine is user is authenticated
+    const login_success = await server.authFinish(username, finishReq, init);
+
     if(login_success){
-        // do actual login stuff
-        return res.send("<p>Login successful</p>");
+        // do session stuff
+        return res.status(200).send();
     } else{
-        return res.send("<p>Login failure :(</p>");
+        return res.status(400).send("Incorrect username or password");
     }
 
 }

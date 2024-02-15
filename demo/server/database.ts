@@ -33,7 +33,7 @@ User.init({
 
 export class Expected extends Model {
     declare username: string;
-    declare expected: number[];
+    declare expected: any;
 }
 
 Expected.init({
