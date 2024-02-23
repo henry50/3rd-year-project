@@ -1,12 +1,10 @@
 import { Request, Response } from "express";
 import { validate } from "jsonschema";
 import { Expected, User } from "./database.js";
-import { OwlServer, AuthFinishRequest, AuthInitRequest, RegistrationRequest, UserCredentials, AuthInitialValues, DeserializationError } from "owl-ts";
+import { OwlServer, AuthFinishRequest, AuthInitRequest, RegistrationRequest, UserCredentials, AuthInitialValues, DeserializationError, Curves } from "owl-ts";
 
 const cfg = {
-    p: "0xfd7f53811d75122952df4a9c2eece4e7f611b7523cef4400c31e3f80b6512669455d402251fb593d8d58fabfc5f5ba30f6cb9b556cd7813b801d346ff26660b76b9950a5a49f9fe8047b1022c24fbba9d7feb7c61bf83b57e7c6a8a6150f04fb83f6d3c51ec3023554135a169132f675f3ae2b61d72aeff22203199dd14801c7",
-    q: "0x9760508f15230bccb292b982a2eb840bf0581cf5",
-    g: "0xf7e1a085d69b3ddecbbcab5c36b857b97994afbbfa3aea82f9574c0b3d0782675159578ebad4594fe67107108180b449167123e84c281613b7cf09328cc8a6e13c167a8b547c8d28e0a3ae1e2bb3a675916ea37f0bfa213562f1fb627a01243bcca4f1bea8519089a883dfe15ae59f06928b665e807b552564014c3bfecf492a",
+    curve: Curves.P256,
     serverId: "localhost"
 }
 
@@ -39,7 +37,7 @@ export async function register_init(req: Request, res: Response){
         return res.status(400).send("That username is already in use, please choose another");
     }
     // create user record
-    const regRequest = RegistrationRequest.deserialize(data);
+    const regRequest = RegistrationRequest.deserialize(data, cfg);
     if(regRequest instanceof DeserializationError){
         return res.status(400).send("Invalid request data");
     }
@@ -99,13 +97,13 @@ export async function auth_init(req: Request, res: Response){
     }
 
     // deserialize stored credentials
-    const credentials = UserCredentials.deserialize(user.credentials);
+    const credentials = UserCredentials.deserialize(user.credentials, cfg);
     if(credentials instanceof DeserializationError){
         return res.status(500).send("Internal error: Could not deserialize user credentials");
     }
 
     // deserialize request
-    const authRequest = AuthInitRequest.deserialize(init);
+    const authRequest = AuthInitRequest.deserialize(init, cfg);
     if(authRequest instanceof DeserializationError){
         return res.status(400).send("Invalid request data");
     }
@@ -160,7 +158,7 @@ export async function auth_finish(req: Request, res: Response){
     }
 
     // deserialize initial values
-    const init = AuthInitialValues.deserialize(initial.expected);
+    const init = AuthInitialValues.deserialize(initial.expected, cfg);
     // delete initial values
     await initial.destroy();
     if(init instanceof DeserializationError){
@@ -168,7 +166,7 @@ export async function auth_finish(req: Request, res: Response){
     }
 
     // deserialize request
-    const finishReq = AuthFinishRequest.deserialize(finish);
+    const finishReq = AuthFinishRequest.deserialize(finish, cfg);
     if(finishReq instanceof DeserializationError){
         return res.status(400).send("Invalid request data");
     }
