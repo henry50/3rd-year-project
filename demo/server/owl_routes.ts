@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { validate } from "jsonschema";
 import { Expected, User } from "./database.js";
-import { OwlServer, AuthFinishRequest, AuthInitRequest, RegistrationRequest, UserCredentials, AuthInitialValues, DeserializationError, Curves } from "owl-ts";
+import { OwlServer, AuthFinishRequest, AuthInitRequest, RegistrationRequest, UserCredentials, AuthInitialValues, DeserializationError, Curves, ZKPVerificationFailure } from "owl-ts";
 
 const cfg = {
     curve: Curves.P256,
@@ -110,7 +110,7 @@ export async function auth_init(req: Request, res: Response){
     
     // get initial auth values
     const authInit = await server.authInit(username, authRequest, credentials);
-    if(authInit instanceof Error){
+    if(authInit instanceof ZKPVerificationFailure){
         return res.status(400).send(authInit.message);
     }
     const {initial, response} = authInit;
@@ -173,6 +173,9 @@ export async function auth_finish(req: Request, res: Response){
 
     // finish auth, determine is user is authenticated
     const login_success = await server.authFinish(username, finishReq, init);
+    if(login_success instanceof Error){
+        return res.status(400).send(login_success.message);
+    }
 
     if(login_success){
         // do session stuff
