@@ -4,7 +4,6 @@ import { fileURLToPath } from "url";
 import session from "express-session";
 import dotenv from "dotenv";
 dotenv.config();
-// make this swappable with ./owl_server.ts??
 import {
     register_init,
     register_finish,
