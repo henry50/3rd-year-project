@@ -1,0 +1,3 @@
+[submodule "owl-ts"]
+	path = owl-ts
+	url = https://github.com/henry50/owl-ts.git
