@@ -47,7 +47,7 @@ document
             if (finish instanceof Error) {
                 throw finish;
             }
-            const { key, finishRequest } = finish;
+            const { finishRequest } = finish;
 
             response = await fetch("/login/login-finish", {
                 method: "POST",
@@ -55,15 +55,24 @@ document
                 body: JSON.stringify({
                     username: username,
                     finish: finishRequest.serialize(),
+                    kc: finish.kc, // optional key confirmation
                 }),
             });
 
-            const type =
-                response.status == 200 ? AlertType.Success : AlertType.Error;
-            showAlert(type, await response.text());
-
-            // catch any error which might occur
+            if (response.ok) {
+                const res = await response.json();
+                // optional key confirmation check
+                if (res.kc && res.kc != finish.kcTest) {
+                    showAlert(AlertType.Error, "Key confirmation failed");
+                } else {
+                    const message = res.message || (await response.text());
+                    showAlert(AlertType.Success, message);
+                }
+            } else {
+                showAlert(AlertType.Error, await response.text());
+            }
         } catch (error: any) {
+            // catch any error which might occur and display it
             showAlert(AlertType.Error, error.message);
         }
         (document.getElementById("submit") as HTMLButtonElement).disabled =

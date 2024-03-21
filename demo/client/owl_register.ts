@@ -32,12 +32,10 @@ document
                 }),
             });
 
-            const type =
-                response.status == 200 ? AlertType.Success : AlertType.Error;
+            const type = response.ok ? AlertType.Success : AlertType.Error;
             showAlert(type, await response.text());
-
-            // catch any errors
         } catch (error: any) {
+            // catch and show any errors
             showAlert(AlertType.Error, error.message);
         }
         (document.getElementById("submit") as HTMLButtonElement).disabled =

@@ -156,6 +156,7 @@ const auth_finish_schema = {
                 r: { type: "string" },
             },
         },
+        kc: { type: "string" },
     },
 };
 
@@ -163,7 +164,7 @@ export async function auth_finish(req: Request, res: Response) {
     if (!validate(req.body, auth_finish_schema)) {
         return res.status(400).send("Incorrect request JSON format");
     }
-    const { username, finish } = req.body;
+    const { username, finish, kc } = req.body;
 
     // find initial values by username
     const initial = await Expected.findByPk(username);
@@ -195,10 +196,16 @@ export async function auth_finish(req: Request, res: Response) {
         return res.status(400).send(login_success.message);
     }
 
-    if (login_success) {
-        // do session stuff
-        return res.send("Login successful");
-    } else {
-        return res.status(400).send("Incorrect username or password");
+    // optional key confirmation check
+    if (login_success.kcTest != kc) {
+        return res.status(400).send("Key confirmation failed");
     }
+
+    // server-side login stuff would go here
+
+    // send success
+    return res.json({
+        message: "Login successful",
+        kc: login_success.kc,
+    });
 }
