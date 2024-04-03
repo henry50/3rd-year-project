@@ -16,3 +16,9 @@ To run the demo, run
 cd demo
 npm run start
 ```
+
+To run the benchmark, run
+```
+cd demo
+npm run benchmark
+```
