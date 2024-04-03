@@ -1,0 +1,27 @@
+{
+  "name": "Test full registration",
+  "date": "2024-04-03T20:35:39.944Z",
+  "version": null,
+  "results": [
+    {
+      "name": "Owl full registration",
+      "ops": 49,
+      "margin": 1.29,
+      "percentSlower": 0
+    },
+    {
+      "name": "OPAQUE full registration",
+      "ops": 6,
+      "margin": 0.48,
+      "percentSlower": 87.76
+    }
+  ],
+  "fastest": {
+    "name": "Owl full registration",
+    "index": 0
+  },
+  "slowest": {
+    "name": "OPAQUE full registration",
+    "index": 1
+  }
+}

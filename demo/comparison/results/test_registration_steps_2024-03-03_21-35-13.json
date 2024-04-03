@@ -1,0 +1,45 @@
+{
+  "name": "Test registration steps",
+  "date": "2024-04-03T20:35:13.844Z",
+  "version": null,
+  "results": [
+    {
+      "name": "Owl client registration",
+      "ops": 146,
+      "margin": 0.83,
+      "percentSlower": 99.15
+    },
+    {
+      "name": "Owl server registration",
+      "ops": 76,
+      "margin": 0.55,
+      "percentSlower": 99.56
+    },
+    {
+      "name": "OPAQUE client initial registration",
+      "ops": 14529,
+      "margin": 4.96,
+      "percentSlower": 15.43
+    },
+    {
+      "name": "OPAQUE server initial registration",
+      "ops": 51,
+      "margin": 0.31,
+      "percentSlower": 99.7
+    },
+    {
+      "name": "OPAQUE client final registration",
+      "ops": 17179,
+      "margin": 5.01,
+      "percentSlower": 0
+    }
+  ],
+  "fastest": {
+    "name": "OPAQUE client final registration",
+    "index": 4
+  },
+  "slowest": {
+    "name": "OPAQUE server initial registration",
+    "index": 3
+  }
+}
