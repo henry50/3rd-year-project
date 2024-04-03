@@ -71,7 +71,7 @@ export default () =>
                 throw response;
             }
             const finish = await owlClient.authFinish(response.response);
-            if (finish instanceof ZKPVerificationFailure) {
+            if (finish instanceof Error) {
                 throw finish;
             }
             return async () => {

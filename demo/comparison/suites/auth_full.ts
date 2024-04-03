@@ -37,7 +37,7 @@ export default () =>
                 const finishRequest = await owlClient.authFinish(
                     initResponse.response,
                 );
-                if (finishRequest instanceof ZKPVerificationFailure) {
+                if (finishRequest instanceof Error) {
                     throw finishRequest;
                 }
                 await owlServer.authFinish(
