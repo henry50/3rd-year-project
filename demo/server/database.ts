@@ -1,13 +1,13 @@
-import { Sequelize, Model, DataTypes } from "sequelize";
 import dotenv from "dotenv";
+import { DataTypes, Model, Sequelize } from "sequelize";
 
 dotenv.config();
 
-const database_uri = process.env.DATABASE_URI;
-if (!database_uri) {
+const databaseURI = process.env.DATABASE_URI;
+if (!databaseURI) {
     throw Error("DATABASE_URI must be set in .env");
 }
-export const sequelize = new Sequelize(database_uri);
+export const sequelize = new Sequelize(databaseURI);
 try {
     await sequelize.authenticate();
     console.log("Connection successful");
@@ -34,18 +34,18 @@ User.init(
     { sequelize },
 );
 
-export class Expected extends Model {
+export class TempValues extends Model {
     declare username: string;
-    declare expected: any;
+    declare values: any;
 }
 
-Expected.init(
+TempValues.init(
     {
         username: {
             type: DataTypes.STRING,
             primaryKey: true,
         },
-        expected: {
+        values: {
             type: DataTypes.JSON,
             allowNull: false,
         },

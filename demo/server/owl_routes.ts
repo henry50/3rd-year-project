@@ -1,17 +1,18 @@
 import { Request, Response } from "express";
 import { validate } from "jsonschema";
-import { Expected, User } from "./database.js";
 import {
-    OwlServer,
     AuthFinishRequest,
     AuthInitRequest,
+    AuthInitialValues,
+    Curves,
+    DeserializationError,
+    OwlServer,
     RegistrationRequest,
     UserCredentials,
-    AuthInitialValues,
-    DeserializationError,
-    Curves,
     ZKPVerificationFailure,
 } from "owl-ts";
+import { TempValues, User } from "./database.js";
+import schemas from "./json_schemas.js";
 
 const cfg = {
     curve: Curves.P256,
@@ -20,22 +21,8 @@ const cfg = {
 
 const server = new OwlServer(cfg);
 
-const register_init_schema = {
-    type: "object",
-    properties: {
-        username: { type: "string" },
-        data: {
-            type: "object",
-            properties: {
-                T: { type: "string" },
-                pi: { type: "string" },
-            },
-        },
-    },
-};
-
 export async function register_init(req: Request, res: Response) {
-    if (!validate(req.body, register_init_schema)) {
+    if (!validate(req.body, schemas.owl.register.init)) {
         return res.status(400).send("Incorrect request JSON format");
     }
     const { username, data } = req.body;
@@ -68,36 +55,8 @@ export async function register_finish(req: Request, res: Response) {
     return res.sendStatus(404);
 }
 
-const auth_init_schema = {
-    type: "object",
-    properties: {
-        username: { type: "string" },
-        init: {
-            type: "object",
-            properties: {
-                X1: { type: "string" },
-                X2: { type: "string" },
-                PI1: {
-                    type: "object",
-                    properties: {
-                        h: { type: "string" },
-                        r: { type: "string" },
-                    },
-                },
-                PI2: {
-                    type: "object",
-                    properties: {
-                        h: { type: "string" },
-                        r: { type: "string" },
-                    },
-                },
-            },
-        },
-    },
-};
-
 export async function auth_init(req: Request, res: Response) {
-    if (!validate(req.body, auth_init_schema)) {
+    if (!validate(req.body, schemas.owl.auth.init)) {
         return res.status(400).send("Incorrect request JSON format");
     }
     const { username, init } = req.body;
@@ -130,44 +89,22 @@ export async function auth_init(req: Request, res: Response) {
     const { initial, response } = authInit;
 
     // store initial values for authFinish
-    await Expected.upsert({
+    await TempValues.upsert({
         username: username,
-        expected: initial.serialize(),
+        values: initial.serialize(),
     });
 
     return res.json(response.serialize());
 }
 
-const auth_finish_schema = {
-    type: "object",
-    properties: {
-        username: { type: "string" },
-        finish: {
-            type: "object",
-            properties: {
-                alpha: { type: "string" },
-                PIAlpha: {
-                    type: "object",
-                    properties: {
-                        h: { type: "string" },
-                        r: { type: "string" },
-                    },
-                },
-                r: { type: "string" },
-            },
-        },
-        kc: { type: "string" },
-    },
-};
-
 export async function auth_finish(req: Request, res: Response) {
-    if (!validate(req.body, auth_finish_schema)) {
+    if (!validate(req.body, schemas.owl.auth.finish)) {
         return res.status(400).send("Incorrect request JSON format");
     }
     const { username, finish, kc } = req.body;
 
     // find initial values by username
-    const initial = await Expected.findByPk(username);
+    const initial = await TempValues.findByPk(username);
     if (!initial) {
         return res
             .status(400)
@@ -175,7 +112,7 @@ export async function auth_finish(req: Request, res: Response) {
     }
 
     // deserialize initial values
-    const init = AuthInitialValues.deserialize(initial.expected, cfg);
+    const init = AuthInitialValues.deserialize(initial.values, cfg);
     // delete initial values
     await initial.destroy();
     if (init instanceof DeserializationError) {
@@ -191,13 +128,13 @@ export async function auth_finish(req: Request, res: Response) {
     }
 
     // finish auth, determine is user is authenticated
-    const login_success = await server.authFinish(username, finishReq, init);
-    if (login_success instanceof Error) {
-        return res.status(400).send(login_success.message);
+    const loginSuccess = await server.authFinish(username, finishReq, init);
+    if (loginSuccess instanceof Error) {
+        return res.status(400).send(loginSuccess.message);
     }
 
     // optional key confirmation check
-    if (login_success.kcTest != kc) {
+    if (loginSuccess.kcTest != kc) {
         return res.status(400).send("Key confirmation failed");
     }
 
@@ -206,6 +143,6 @@ export async function auth_finish(req: Request, res: Response) {
     // send success
     return res.json({
         message: "Login successful",
-        kc: login_success.kc,
+        kc: loginSuccess.kc,
     });
 }

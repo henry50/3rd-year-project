@@ -1,17 +1,18 @@
 import {
-    getOpaqueConfig,
-    OpaqueID,
-    RegistrationRecord,
     CredentialFile,
-    RegistrationRequest,
-    OpaqueServer,
+    ExpectedAuthResult,
     KE1,
     KE3,
-    ExpectedAuthResult,
+    OpaqueID,
+    OpaqueServer,
+    RegistrationRecord,
+    RegistrationRequest,
+    getOpaqueConfig,
 } from "@cloudflare/opaque-ts";
 import { Request, Response } from "express";
 import { validate } from "jsonschema";
-import { Expected, User } from "./database.js";
+import { TempValues, User } from "./database.js";
+import schemas from "./json_schemas.js";
 
 const cfg = getOpaqueConfig(OpaqueID.OPAQUE_P256);
 
@@ -33,19 +34,8 @@ const server_ake_keypair = {
 };
 const server_identity = "localhost";
 
-export const register_init_schema = {
-    type: "object",
-    properties: {
-        init: {
-            type: "array",
-            items: { type: "integer" },
-        },
-        username: { type: "string" },
-    },
-};
-
 export async function register_init(req: Request, res: Response) {
-    if (!validate(req.body, register_init_schema)) {
+    if (!validate(req.body, schemas.opaque.register.init)) {
         return res.status(400).send("Incorrect JSON format");
     }
     const initSerialised = req.body.init;
@@ -83,19 +73,8 @@ export async function register_init(req: Request, res: Response) {
     });
 }
 
-const register_finish_schema = {
-    type: "object",
-    properties: {
-        record: {
-            type: "array",
-            items: { type: "integer" },
-        },
-        username: { type: "string" },
-    },
-};
-
 export async function register_finish(req: Request, res: Response) {
-    if (!validate(req.body, register_finish_schema)) {
+    if (!validate(req.body, schemas.opaque.register.finish)) {
         return res.status(400).send("Incorrect JSON format");
     }
     const recordSerialised = req.body.record;
@@ -118,19 +97,8 @@ export async function register_finish(req: Request, res: Response) {
     });
 }
 
-const auth_init_schema = {
-    type: "object",
-    properties: {
-        ke1: {
-            type: "array",
-            items: { type: "integer" },
-        },
-        username: { type: "string" },
-    },
-};
-
 export async function auth_init(req: Request, res: Response) {
-    if (!validate(req.body, auth_init_schema)) {
+    if (!validate(req.body, schemas.opaque.auth.init)) {
         return res.status(400).send("Incorrect JSON format");
     }
     const ke1Serialised = req.body.ke1;
@@ -144,7 +112,7 @@ export async function auth_init(req: Request, res: Response) {
     if (credential_file.credential_identifier != credential_identifier) {
         return res
             .status(400)
-            .send("Credential identified does not match stored record");
+            .send("Credential identifier does not match stored record");
     }
     const authServer = new OpaqueServer(
         cfg,
@@ -163,10 +131,9 @@ export async function auth_init(req: Request, res: Response) {
         return res.status(400).send(initiated.message);
     }
     const { ke2, expected } = initiated;
-    // todo: check if record already exists
-    await Expected.upsert({
+    await TempValues.upsert({
         username: credential_identifier,
-        expected: expected.serialize(),
+        values: expected.serialize(),
     });
     return res.json({
         message: "intermediate authentication key enclosed",
@@ -174,23 +141,8 @@ export async function auth_init(req: Request, res: Response) {
     });
 }
 
-const auth_finish_schema = {
-    type: "object",
-    properties: {
-        ke3: {
-            type: "array",
-            items: { type: "integer" },
-        },
-        username: { type: "string" },
-        session_key: {
-            type: "array",
-            items: { type: "integer" },
-        },
-    },
-};
-
 export async function auth_finish(req: Request, res: Response) {
-    if (!validate(req.body, auth_finish_schema)) {
+    if (!validate(req.body, schemas.opaque.auth.finish)) {
         return res.status(400).send("Incorrect JSON format");
     }
     const ke3Serialised = req.body.ke3;
@@ -203,14 +155,11 @@ export async function auth_finish(req: Request, res: Response) {
         server_identity,
     );
     const ke3 = KE3.deserialize(cfg, ke3Serialised);
-    const expected = await Expected.findByPk(credential_identifier);
+    const expected = await TempValues.findByPk(credential_identifier);
     if (!expected) {
         return res.status(404).send("Could not find expected auth result");
     }
-    const expected_auth = ExpectedAuthResult.deserialize(
-        cfg,
-        expected.expected,
-    );
+    const expected_auth = ExpectedAuthResult.deserialize(cfg, expected.values);
     const authFinish = authServer.authFinish(ke3, expected_auth);
     if (authFinish instanceof Error) {
         return res.status(400).send(authFinish.message);
@@ -218,7 +167,7 @@ export async function auth_finish(req: Request, res: Response) {
     await expected.destroy();
     const { session_key: server_session_key } = authFinish;
     return res.json({
-        message: "login success",
+        message: "Login successful",
         client_session_key: client_session_key,
         server_session_key: server_session_key,
     });
