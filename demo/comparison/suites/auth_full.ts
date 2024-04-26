@@ -12,8 +12,8 @@ import suite from "./helpers/suite.js";
 
 export default () =>
     suite(
-        "Test full authorisation",
-        add("Owl full authorisation", async () => {
+        "Test full authentication",
+        add("Owl full authentication", async () => {
             const owlClient = new OwlClient(owlConfig);
             const owlServer = new OwlServer(owlConfig);
             const regRequest = await owlClient.register(
@@ -47,7 +47,7 @@ export default () =>
                 );
             };
         }),
-        add("OPAQUE full authorisation", async () => {
+        add("OPAQUE full authentication", async () => {
             const opaqueClient = new OpaqueClient(opaqueConfig);
             const opaqueServer = new OpaqueServer(...opaqueServerConfig);
             const regRequest = await opaqueClient.registerInit(password);

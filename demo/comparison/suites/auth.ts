@@ -12,7 +12,7 @@ import suite from "./helpers/suite.js";
 
 export default () =>
     suite(
-        "Test authorisation steps",
+        "Test authentication steps",
         add("Owl client authInit", async () => {
             const owlClient = new OwlClient(owlConfig);
             return async () => {
