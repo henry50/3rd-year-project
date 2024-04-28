@@ -15,22 +15,30 @@ const options = {
         // to run each test minSamples times
         minTime: -Infinity,
         maxTime: -Infinity,
-        minSamples: 100,
+        minSamples: 10000,
     },
 };
 
 function saveFileName(summary: Summary): string {
     const d = summary.date;
     const pad = (n: number) => String(n < 10 ? "0" + n : n);
-    const date = [d.getFullYear(), d.getMonth(), d.getDate()].map(pad).join("-");
-    const time = [d.getHours(), d.getMinutes(), d.getSeconds()].map(pad).join("-");
-    return [summary.name.replace(/\s+/g, "_").toLowerCase(), date, time].join("_");
+    const date = [d.getFullYear(), d.getMonth(), d.getDate()]
+        .map(pad)
+        .join("-");
+    const time = [d.getHours(), d.getMinutes(), d.getSeconds()]
+        .map(pad)
+        .join("-");
+    return [summary.name.replace(/\s+/g, "_").toLowerCase(), date, time].join(
+        "_",
+    );
 }
 
 const saveOptions: SaveOptions = {
     file: saveFileName,
     folder: "results",
-}
+    details: true,
+    format: "csv",
+};
 
 // These types and the getStatus and meanCycle functions
 // are modified from benny/src/suite.ts
@@ -109,7 +117,7 @@ const suite: SuiteFn = async (name, ...entries) => {
         cycle(meanCycle),
         complete(),
         configure(options),
-        save(saveOptions)
+        save(saveOptions),
     );
 };
 
