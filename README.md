@@ -18,7 +18,11 @@ These commands assume your current directory is the root of the repository.
 
 To build the demo, run
 ```
-cd demo
+cd owl-ts
+npm install
+npm run build
+
+cd ../demo
 npm install
 npm run build
 ```
@@ -45,11 +49,12 @@ npx tsx generate_env.ts
 ```
 
 ## Run
-To run the demo, run
+Once configured, the demo can be run with
 ```
 cd demo
 npm run start
 ```
+By default it will start on localhost:3000.
 
 To run the benchmark, run
 ```
